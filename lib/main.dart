@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vibration/vibration.dart';
 import 'package:wear/wear.dart';
 
 void main() {
@@ -8,6 +11,13 @@ void main() {
     debugShowCheckedModeBanner: false,
     home: WearAlarmApp(),
   ));
+}
+
+class AlarmItem {
+  final TimeOfDay time;
+  bool isEnabled;
+
+  AlarmItem(this.time, this.isEnabled);
 }
 
 class WearAlarmApp extends StatefulWidget {
@@ -18,7 +28,9 @@ class WearAlarmApp extends StatefulWidget {
 }
 
 class _WearAlarmAppState extends State<WearAlarmApp> {
-  List<TimeOfDay> alarms = [];
+  late Timer alarmChecker;
+  final AudioPlayer _player = AudioPlayer();
+  List<AlarmItem> alarms = [];
 
   @override
   void initState() {
@@ -26,6 +38,38 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
     loadAlarms().then((_) {
       setState(() {}); // Ensures UI updates after loading
     });
+
+    Timer.periodic(
+        const Duration(
+          seconds: 1,
+        ), (timer) {
+      final now = TimeOfDay.now();
+      for (var alarm in alarms) {
+        if (alarm.time.hour == now.hour && alarm.time.minute == now.minute && alarm.isEnabled == true) {
+          startAlarm();
+          print(now);
+          break;
+        }
+      }
+    });
+  }
+
+  void startAlarm() async {
+    await _player.play(AssetSource('ringtones/newday.mp3'));
+    if (await Vibration.hasVibrator() ?? false) {
+      Vibration.vibrate(
+          pattern: [0, 500, 1000, 500, 1000],
+          repeat: 0); // vibrate with a pattern
+    }
+    Future.delayed(const Duration(minutes: 1), () {
+      _player.stop();
+    });
+  }
+
+  @override
+  void dispose() {
+    alarmChecker.cancel();
+    super.dispose();
   }
 
   Future<void> loadAlarms() async {
@@ -35,18 +79,22 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
     if (alarmStrings != null) {
       alarms = alarmStrings.map((alarmString) {
         final parts = alarmString.split(':');
-        return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-      }).toList();
-    }
+        final hour = int.parse(parts[0]);
+        final minute = int.parse(parts[1]);
+        final isEnabled = parts.length > 2 ? parts[2] == 'true': true;
 
-    print('Loaded alarms: $alarms');
+        return AlarmItem(TimeOfDay(hour: hour, minute: minute), isEnabled);
+      }).toList();
+      print('Loaded alarms: $alarms');
+    }
   }
 
   Future<void> saveAlarms() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String> alarmStrings = alarms
-        .map((alarm) => '${alarm.hour}:${alarm.minute}')
-        .toList();
+        .map(
+            (alarm) => '${alarm.time.hour}:${alarm.time.minute}'
+        ).toList();
     await prefs.setStringList('alarms', alarmStrings);
 
     print('Saved alarms: $alarmStrings');
@@ -87,8 +135,10 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                           maxValue: 12,
                           value: hour,
                           onChanged: (val) => setState(() => hour = val),
-                          textStyle: const TextStyle(color: Colors.white30, fontSize: 0),
-                          selectedTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
+                          textStyle: const TextStyle(
+                              color: Colors.white30, fontSize: 0),
+                          selectedTextStyle: const TextStyle(
+                              color: Colors.white, fontSize: 20),
                           infiniteLoop: true,
                           itemWidth: 30,
                           itemHeight: 20,
@@ -110,8 +160,10 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                           value: minute,
                           zeroPad: true,
                           onChanged: (val) => setState(() => minute = val),
-                          textStyle: const TextStyle(color: Colors.white30, fontSize: 0),
-                          selectedTextStyle: const TextStyle(color: Colors.white, fontSize: 20),
+                          textStyle: const TextStyle(
+                              color: Colors.white30, fontSize: 0),
+                          selectedTextStyle: const TextStyle(
+                              color: Colors.white, fontSize: 20),
                           itemWidth: 30,
                           itemHeight: 20,
                           infiniteLoop: true,
@@ -122,24 +174,32 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                             GestureDetector(
                               onTap: () => setState(() => isAM = true),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: isAM ? Colors.blue : Colors.transparent,
+                                  color:
+                                      isAM ? Colors.blue : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text("AM", style: TextStyle(color: Colors.white, fontSize: 15)),
+                                child: const Text("AM",
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 15)),
                               ),
                             ),
                             const SizedBox(height: 10),
                             GestureDetector(
                               onTap: () => setState(() => isAM = false),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: !isAM ? Colors.blue : Colors.transparent,
+                                  color:
+                                      !isAM ? Colors.blue : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text("PM", style: TextStyle(color: Colors.white, fontSize: 15)),
+                                child: const Text("PM",
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 15)),
                               ),
                             ),
                           ],
@@ -152,17 +212,20 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                       children: [
                         GestureDetector(
                           onTap: () => Navigator.pop(context),
-                          child: const Icon(Icons.close, color: Colors.red, size: 30),
+                          child: const Icon(Icons.close,
+                              color: Colors.red, size: 30),
                         ),
                         GestureDetector(
                           onTap: () {
                             final adjustedHour = isAM
                                 ? (hour == 12 ? 0 : hour)
                                 : (hour == 12 ? 12 : hour + 12);
-                            final selectedTime = TimeOfDay(hour: adjustedHour, minute: minute);
+                            final selectedTime =
+                                TimeOfDay(hour: adjustedHour, minute: minute);
                             Navigator.pop(context, selectedTime);
                           },
-                          child: const Icon(Icons.check, color: Colors.blue, size: 30),
+                          child: const Icon(Icons.check,
+                              color: Colors.blue, size: 30),
                         ),
                       ],
                     )
@@ -181,50 +244,113 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
     return WatchShape(
       builder: (context, shape, child) {
         return Scaffold(
-          backgroundColor: Colors.lightGreenAccent.shade700,
+          backgroundColor: Colors.black,
           body: Container(
-            width: double.infinity,
             child: Column(
               children: [
-                const SizedBox(height: 10),
-                GestureDetector(
-                  onTap: () async {
-                    final TimeOfDay? newAlarm = await _showTimePicker(context);
-                    if (newAlarm != null) {
-                      setState(() {
-                        alarms.add(newAlarm);
-                      });
-                      await saveAlarms();
-                    }
-                  },
-                  child: const Icon(Icons.alarm, size: 50, color: Colors.white),
+                Padding(
+                  padding: const EdgeInsets.only(top: 5.0,),
+                  child: Container(
+                    height: 60,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            final TimeOfDay? newAlarm =
+                                await _showTimePicker(context);
+                            if (newAlarm != null) {
+                              setState(() {
+                                alarms.add(AlarmItem(newAlarm, true));
+                              });
+                              await saveAlarms();
+                            }
+                          },
+                          child: const Icon(
+                            Icons.alarm_add,
+                            size: 30,
+                            color: Colors.white,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () async {
+                            final TimeOfDay? newAlarm =
+                                await _showTimePicker(context);
+                            if (newAlarm != null) {
+                              setState(() {
+                                alarms.add(AlarmItem(newAlarm, true));
+                              });
+                              await saveAlarms();
+                            }
+                          },
+                          child: const Text(
+                            'Alarm',
+                            style: TextStyle(
+                              fontSize: 30,
+                              color: Colors.lightGreen,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 Expanded(
                   child: ListView.builder(
                     itemCount: alarms.length,
+                    scrollDirection: Axis.vertical,
                     itemBuilder: (context, index) {
-                      final alarm = alarms[index];
+                      final alarm = alarms[index].time;
                       final hour = alarm.hourOfPeriod == 0 ? 12 : alarm.hourOfPeriod;
                       final minute = alarm.minute.toString().padLeft(2, '0');
                       final period = alarm.period == DayPeriod.am ? "AM" : "PM";
 
                       return Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: ListTile(
-                          tileColor: Colors.transparent,
-                          leading: const Icon(Icons.access_alarm, color: Colors.red),
-                          title: Text(
-                            '$hour:$minute $period',
-                            style: const TextStyle(color: Colors.red, fontSize: 20),
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Container(
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Color(0xFF0E0E0E),
+                            borderRadius: BorderRadius.circular(40),
                           ),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.white),
-                            onPressed: () async {
+                          child: ListTile(
+                            contentPadding: EdgeInsets.symmetric(vertical: 3.5, horizontal: 10),
+                            title: Row(
+                              children: [
+                                Text(
+                                  '$hour:$minute',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w400),
+                                ),
+                                Text(
+                                  ' $period',
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 18),
+                                ),
+                              ],
+                            ),
+                            onLongPress: () async {
                               setState(() {
                                 alarms.removeAt(index);
                               });
                               await saveAlarms();
                             },
+                            trailing: Switch(
+                              value: alarms[index].isEnabled,
+                              onChanged: (value) async {
+                                alarms[index].isEnabled = !alarms[index].isEnabled;
+                                setState(() {
+                                  alarms;
+                                });
+                                await alarms;
+                              },
+                              activeColor: Colors.green,
+                              activeTrackColor: Colors.green.shade200,
+                              inactiveTrackColor: Colors.white10,
+                              inactiveThumbColor: Colors.white54,
+                            ),
                           ),
                         ),
                       );
