@@ -100,8 +100,14 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
     print('Saved alarms: $alarmStrings');
   }
 
-  Future<TimeOfDay?> _showTimePicker(BuildContext context) async {
-    TimeOfDay selectedTime = TimeOfDay.now();
+  Future<TimeOfDay?> _showTimePicker(BuildContext context, int index) async {
+    TimeOfDay selectedTime;
+    if(index == -1){
+      selectedTime = TimeOfDay.now();
+    }
+    else{
+      selectedTime = alarms[index].time;
+    }
     int hour = selectedTime.hourOfPeriod == 0 ? 12 : selectedTime.hourOfPeriod;
     int minute = selectedTime.minute;
     bool isAM = selectedTime.period == DayPeriod.am;
@@ -198,8 +204,11 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Text("PM",
-                                    style: TextStyle(
-                                        color: Colors.white, fontSize: 15)),
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -250,48 +259,36 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 5.0,),
-                  child: Container(
-                    height: 60,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        GestureDetector(
-                          onTap: () async {
-                            final TimeOfDay? newAlarm =
-                                await _showTimePicker(context);
-                            if (newAlarm != null) {
-                              setState(() {
-                                alarms.add(AlarmItem(newAlarm, true));
-                              });
-                              await saveAlarms();
-                            }
-                          },
-                          child: const Icon(
+                  child: GestureDetector(
+                    onTap: () async {
+                      final TimeOfDay? newAlarm = await
+                        _showTimePicker(context, -1);
+                      if (newAlarm != null) {
+                        setState(() {
+                          alarms.add(AlarmItem(newAlarm, true));
+                        });
+                        await saveAlarms();
+                      }
+                    },
+                    child: Container(
+                      height: 60,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(
                             Icons.alarm_add,
                             size: 30,
                             color: Colors.white,
                           ),
-                        ),
-                        GestureDetector(
-                          onTap: () async {
-                            final TimeOfDay? newAlarm =
-                                await _showTimePicker(context);
-                            if (newAlarm != null) {
-                              setState(() {
-                                alarms.add(AlarmItem(newAlarm, true));
-                              });
-                              await saveAlarms();
-                            }
-                          },
-                          child: const Text(
+                          Text(
                             'Alarm',
                             style: TextStyle(
                               fontSize: 30,
                               color: Colors.lightGreen,
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -331,6 +328,16 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                                 ),
                               ],
                             ),
+                            onTap: () async {
+                              final TimeOfDay? newAlarm = await
+                                _showTimePicker(context, index);
+                              if (newAlarm != null) {
+                                setState(() {
+                                  alarms[index] = AlarmItem(newAlarm, true);
+                                });
+                                await saveAlarms();
+                              }
+                            },
                             onLongPress: () async {
                               setState(() {
                                 alarms.removeAt(index);
