@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_switch/flutter_switch.dart';
 import 'package:numberpicker/numberpicker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
@@ -94,7 +95,7 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
     final List<String> alarmStrings = alarms
         .map(
             (alarm) => '${alarm.time.hour}:${alarm.time.minute}'
-        ).toList();
+    ).toList();
     await prefs.setStringList('alarms', alarmStrings);
 
     print('Saved alarms: $alarmStrings');
@@ -184,7 +185,7 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                                     horizontal: 5, vertical: 5),
                                 decoration: BoxDecoration(
                                   color:
-                                      isAM ? Colors.blue : Colors.transparent,
+                                  isAM ? Colors.blue : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Text("AM",
@@ -200,7 +201,7 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                                     horizontal: 5, vertical: 5),
                                 decoration: BoxDecoration(
                                   color:
-                                      !isAM ? Colors.blue : Colors.transparent,
+                                  !isAM ? Colors.blue : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Text("PM",
@@ -230,7 +231,7 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                                 ? (hour == 12 ? 0 : hour)
                                 : (hour == 12 ? 12 : hour + 12);
                             final selectedTime =
-                                TimeOfDay(hour: adjustedHour, minute: minute);
+                            TimeOfDay(hour: adjustedHour, minute: minute);
                             Navigator.pop(context, selectedTime);
                           },
                           child: const Icon(Icons.check,
@@ -262,7 +263,7 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                   child: GestureDetector(
                     onTap: () async {
                       final TimeOfDay? newAlarm = await
-                        _showTimePicker(context, -1);
+                      _showTimePicker(context, -1);
                       if (newAlarm != null) {
                         setState(() {
                           alarms.add(AlarmItem(newAlarm, true));
@@ -330,7 +331,7 @@ class _WearAlarmAppState extends State<WearAlarmApp> {
                             ),
                             onTap: () async {
                               final TimeOfDay? newAlarm = await
-                                _showTimePicker(context, index);
+                              _showTimePicker(context, index);
                               if (newAlarm != null) {
                                 setState(() {
                                   alarms[index] = AlarmItem(newAlarm, true);

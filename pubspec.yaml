@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-
+  flutter_switch: ^0.3.2
   cupertino_icons: ^1.0.2
   wear: ^1.1.0
   numberpicker: ^2.1.1
